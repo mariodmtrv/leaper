@@ -11,9 +11,10 @@ import os, multiprocessing, csv
 
 from image_extraction.image_extractor import ImageExtractor
 
-ROOT_PATH = "/home/marioocado/Downloads/google-landmarks-dataset/"
-DATA_FILE = ROOT_PATH + "index.csv"
-OUT_DIR = ROOT_PATH + "images"
+BASE_PATH = "/home/marioocado/Projects/university/master-thesis"
+ROOT_PATH = BASE_PATH + "/ml_vision_data"
+DATA_FILE = ROOT_PATH + "/train.csv"
+OUT_DIR = BASE_PATH + "/images/ml_vision_data"
 
 
 class UrlsFileParser:
@@ -24,22 +25,24 @@ class UrlsFileParser:
   def parse_data(self):
     csvfile = open(self.data_file, 'r')
     csvreader = csv.reader(csvfile)
-    key_url_list = [line[:2] for line in csvreader]
+    key_url_list = [line[:3] for line in csvreader]
     return key_url_list[1:]  # Chop off header
 
 
 class MultiprocessDatasetExtractor:
+  def __init__(self, split_in_dirs):
+    self.split_in_subdirs = split_in_dirs
 
   def extract_images(self):
     if not os.path.exists(OUT_DIR):
       os.mkdir(OUT_DIR)
     file_parser = UrlsFileParser(DATA_FILE)
     key_url_list = file_parser.parse_data()
-    image_extractor = ImageExtractor(OUT_DIR)
+    image_extractor = ImageExtractor(OUT_DIR, self.split_in_subdirs)
     pool = multiprocessing.Pool(processes=50)
     pool.map(image_extractor.download_image, key_url_list)
 
 
 if __name__ == '__main__':
-  dataset_extractor = MultiprocessDatasetExtractor()
+  dataset_extractor = MultiprocessDatasetExtractor(True)
   dataset_extractor.extract_images()

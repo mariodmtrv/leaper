@@ -20,14 +20,17 @@ class DatasetType(Enum):
   DEV = 1,
   HYPO_EVAL = 2,
   PARAM_CONFIG = 3,
-  FULL = 4
+  FULL = 4,
+  ML_VISION =5
 
 
 '''
 The various datasets used in developing the solution and their specific parameters
 '''
 DATASETS = {DatasetType.DEV: Dataset(10, ROOT_DIRECTORY + "/dev_data"),
-            DatasetType.HYPO_EVAL: Dataset(500,
+            DatasetType.ML_VISION: Dataset(30,
+                                           ROOT_DIRECTORY + "/ml_vision_data"),
+            DatasetType.HYPO_EVAL: Dataset(100,
                                            ROOT_DIRECTORY + "/hypo_eval_data"),
             DatasetType.PARAM_CONFIG:
               Dataset(1000,
@@ -83,5 +86,5 @@ class DatasetSampler:
 
 
 if __name__ == '__main__':
-  sampler = DatasetSampler(DATASETS[DatasetType.DEV])
+  sampler = DatasetSampler(DATASETS[DatasetType.ML_VISION])
   sampler.select_categories()

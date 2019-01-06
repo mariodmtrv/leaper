@@ -10,8 +10,9 @@ Selectively downloads a single image from the given url
 
 class ImageExtractor:
 
-  def __init__(self, out_dir):
+  def __init__(self, out_dir, split_in_subdirs):
     self.out_dir = out_dir
+    self.split_in_subdirs = split_in_subdirs
 
   '''
   Filters urls where download would fail
@@ -96,8 +97,14 @@ class ImageExtractor:
       return
 
   def download_image(self, key_url):
-    (key, url) = key_url
-    filename = os.path.join(self.out_dir, '%s.jpg' % key)
+    key, url, target_dir = key_url
+    constructed_dir = self.out_dir
+    if self.split_in_subdirs:
+      constructed_dir = os.path.join(self.out_dir, target_dir)
+      if not os.path.exists(constructed_dir):
+        os.mkdir(constructed_dir)
+
+    filename = os.path.join(constructed_dir, '%s.jpg' % key)
     if self.is_image_downloaded(filename):
       return
 
