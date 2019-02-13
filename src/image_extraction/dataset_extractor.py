@@ -1,20 +1,15 @@
 # Landmark Recognition Challenge Image Downloader
-# Inspired by Tobias Weyand
-# https://www.kaggle.com/tobwey/landmark-recognition-challenge-image-downloader
-
 # Downloads images from the Google Landmarks dataset using multiple threads.
 # Images that already exist will not be downloaded again, so the script can
 # resume a partially completed download. All images will be saved in the JPG
 # format with 90% compression quality.
 
-import os, multiprocessing, csv
+import csv
+import multiprocessing
+import os
 
 from image_extraction.image_extractor import ImageExtractor
-
-BASE_PATH = "/home/marioocado/Projects/university/master-thesis"
-ROOT_PATH = BASE_PATH + "/ml_vision_data"
-DATA_FILE = ROOT_PATH + "/train.csv"
-OUT_DIR = BASE_PATH + "/images/ml_vision_data"
+from reporting.execution_parameters import BASE_PATH
 
 
 class UrlsFileParser:
@@ -30,19 +25,22 @@ class UrlsFileParser:
 
 
 class MultiprocessDatasetExtractor:
-  def __init__(self, split_in_dirs):
+  def __init__(self, selected_dir, split_in_dirs):
     self.split_in_subdirs = split_in_dirs
+    self.ROOT_PATH = BASE_PATH + selected_dir
+    self.DATA_FILE = self.ROOT_PATH + "/train.csv"
+    self.OUT_DIR = BASE_PATH + "/images" + selected_dir
 
   def extract_images(self):
-    if not os.path.exists(OUT_DIR):
-      os.mkdir(OUT_DIR)
-    file_parser = UrlsFileParser(DATA_FILE)
+    if not os.path.exists(self.OUT_DIR):
+      os.mkdir(self.OUT_DIR)
+    file_parser = UrlsFileParser(self.DATA_FILE)
     key_url_list = file_parser.parse_data()
-    image_extractor = ImageExtractor(OUT_DIR, self.split_in_subdirs)
+    image_extractor = ImageExtractor(self.OUT_DIR, self.split_in_subdirs)
     pool = multiprocessing.Pool(processes=50)
     pool.map(image_extractor.download_image, key_url_list)
 
 
 if __name__ == '__main__':
-  dataset_extractor = MultiprocessDatasetExtractor(True)
+  dataset_extractor = MultiprocessDatasetExtractor("/dev_data", False)
   dataset_extractor.extract_images()

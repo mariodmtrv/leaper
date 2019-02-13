@@ -1,7 +1,7 @@
 '''
 Clusters the given images in groups in order to give representation
 '''
-import ImageCluster
+from clustering import ImageCluster
 
 
 class ImageGrouping:
