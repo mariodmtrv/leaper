@@ -21,7 +21,6 @@ from keras import backend as K
 
 
 class InceptionModel(LearningModel):
-
   def __init__(self):
     self.inception_model = inception_v3.InceptionV3(weights='imagenet')
 
@@ -29,7 +28,8 @@ class InceptionModel(LearningModel):
     classes = {}
     counter = 0
     for filename in files_list:
-      original = load_img(PATH + filename, target_size=(TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION))
+      original = load_img(PATH + filename, target_size=(
+      TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION))
       numpy_image = img_to_array(original)
       image_batch = np.expand_dims(numpy_image, axis=0)
       # plt.imshow(np.uint8(image_batch[0]))
@@ -63,7 +63,8 @@ class InceptionModel(LearningModel):
         output)
     self.inception_model = Model(self.inception_model.input, output)
 
-    # print(self.inception_model.summary())
+    def summary(self):
+      print(self.inception_model.summary())
 
     def train(self):
       train_datagen = ImageDataGenerator(
@@ -79,13 +80,33 @@ class InceptionModel(LearningModel):
                                                           batch_size=32,
                                                           class_mode='categorical',
                                                           shuffle=True)
+      validation_datagen = ImageDataGenerator(
+          preprocessing_function=preprocess_input, rotation_range=20,
+          zoom_range=[0.7, 0.9],
+          horizontal_flip=True,
+          rescale=1. / 255)
+      validation_generator = validation_datagen.flow_from_directory(
+          PATH + "_test",
+          target_size=(TARGET_IMAGE_DIMENSION,
+                       TARGET_IMAGE_DIMENSION),
+          class_mode="categorical")
+      validation_steps = validation_generator.n // validation_generator.batch_size
+      best_model_path = BASE_PATH + "/models" + "/inception_" + CURRENT_DATASET + "_model.h5"
+
+      callbacks = [
+        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1),
+        ModelCheckpoint(filepath=best_model_path, monitor='val_loss', save_best_only=True, verbose=1),
+      ]
       self.inception_model.compile(optimizer='Adam',
                                    loss='categorical_crossentropy',
                                    metrics=['accuracy'])
       step_size_train = train_generator.n // train_generator.batch_size
       self.inception_model.fit_generator(generator=train_generator,
                                          steps_per_epoch=step_size_train,
-                                         epochs=1)
+                                         validation_data=validation_generator,
+                                         validation_steps= validation_steps,
+                                         epochs=5,
+                                         callbacks = callbacks)
 
     def save(self):
       self.inception_model.save(MODEL_PATH)

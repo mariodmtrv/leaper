@@ -28,7 +28,9 @@ class VggModel(LearningModel):
     # creating the final model
     self.vgg_model = Model(
         self.vgg_model.input, output)
-    # print(self.resnet_model.summary())
+
+  def summary(self):
+    print(self.vgg_model.summary())
 
   def train(self):
     train_datagen = ImageDataGenerator(

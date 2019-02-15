@@ -1,19 +1,17 @@
 import os
+import pickle
 
-import numpy as np
-from keras.applications import resnet50
-from keras.applications.imagenet_utils import decode_predictions
-from keras.applications.resnet50 import preprocess_input
-from keras.layers import Dense, GlobalAveragePooling2D, Dropout
-from keras.models import Model
-from keras.preprocessing.image import img_to_array
-from keras.preprocessing.image import load_img, ImageDataGenerator
-import numpy as np
-from keras.models import load_model
-from keras_preprocessing import image
 import cv2
 import keras.backend as K
 import matplotlib.pyplot as plt
+import numpy as np
+from keras.applications import resnet50
+from keras.applications.resnet50 import preprocess_input
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
+from keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from keras.models import Model
+from keras.models import load_model
+from keras.preprocessing.image import ImageDataGenerator
 from scipy.misc import imread, imresize
 
 from classification.learning_model import LearningModel
@@ -25,28 +23,6 @@ class ResnetModel(LearningModel):
   def __init__(self):
     self.resnet_model = resnet50.ResNet50(weights='imagenet', include_top=False)
     self.is_trained = False
-
-  def predict(self, files_list):
-    classes = {}
-    counter = 0
-    for filename in files_list:
-      original = load_img(PATH + filename, target_size=(
-        TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION))
-      numpy_image = img_to_array(original)
-      image_batch = np.expand_dims(numpy_image, axis=0)
-      # plt.imshow(np.uint8(image_batch[0]))
-      processed_image = resnet50.preprocess_input(image_batch.copy())
-      predictions = self.resnet_model.predict(processed_image)
-      label = decode_predictions(predictions)
-      cls = label[0][0][1]
-      if (cls in classes):
-        classes[cls] = classes[cls] + 1
-      else:
-        classes[cls] = 1
-      counter = counter + 1
-      if counter % 100 == 1:
-        print(counter)
-    return classes
 
   def get_files_list(self, directory):
     files_list = os.listdir(directory)
@@ -71,9 +47,17 @@ class ResnetModel(LearningModel):
       layer.trainable = False
     self.resnet_model.layers[-1].trainable
 
+  def summary(self):
+    print(self.resnet_model.summary())
+
   def train(self):
     # print(self.resnet_model.summary())
     train_datagen = ImageDataGenerator(
+        preprocessing_function=preprocess_input, rotation_range=20,
+        zoom_range=[0.7, 0.9],
+        horizontal_flip=True,
+        rescale=1. / 255)
+    validation_datagen = ImageDataGenerator(
         preprocessing_function=preprocess_input, rotation_range=20,
         zoom_range=[0.7, 0.9],
         horizontal_flip=True,
@@ -86,27 +70,52 @@ class ResnetModel(LearningModel):
                                                         batch_size=32,
                                                         class_mode='categorical',
                                                         shuffle=True)
+    validation_generator = validation_datagen.flow_from_directory(
+        PATH + "_test",
+        target_size=(TARGET_IMAGE_DIMENSION,
+                     TARGET_IMAGE_DIMENSION),
+        class_mode="categorical")
+
+    self.store_class_mapping(train_generator)
     self.resnet_model.compile(optimizer='Adam', loss='categorical_crossentropy',
                               metrics=['accuracy'])
+
     step_size_train = train_generator.n // train_generator.batch_size
+    validation_steps = validation_generator.n // validation_generator.batch_size
+    best_model_path = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_model.h5"
+
+    callbacks = [
+      ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1),
+      ModelCheckpoint(filepath=best_model_path, monitor='val_loss', save_best_only=True, verbose=1),
+    ]
     self.resnet_model.fit_generator(generator=train_generator,
                                     steps_per_epoch=step_size_train,
-                                    epochs=3)
+                                    validation_data=validation_generator,
+                                    validation_steps= validation_steps,
+                                    epochs=5,
+                                    callbacks = callbacks)
     self.is_trained = True
+
+  def store_class_mapping(self, train_generator):
+    filepath = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_2.mapping"
+    with open(filepath, 'wb') as file:
+      label_map = (train_generator.class_indices)
+      pickle.dump(label_map, file, pickle.HIGHEST_PROTOCOL)
 
   def save(self):
     self.resnet_model.save(MODEL_PATH)
 
-  def get_image(self, image_fname,
-      target_size=(TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION)):
+  def get_image(self, image_fname):
     original = imread(image_fname)
     image = imresize(original, (TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION))
     image = np.expand_dims(image, axis=0)
     return image, original
+
   """
   Generate heatmap to show activation for the last conv layer
   Sanity check that the model learns roughly what a human would use to identify the image
   """
+
   def heatmap_for_image(self, image_subpath):
     """
     Load the model if it is not available
@@ -141,8 +150,8 @@ class ResnetModel(LearningModel):
 
 
 if __name__ == '__main__':
-  PATH = BASE_PATH + "/images" + "/" + CURRENT_DATASET + "/"
-  MODEL_PATH = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_model.h5"
+  PATH = BASE_PATH + "/images" + "/" + CURRENT_DATASET + "_data"
+  MODEL_PATH = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_model_2.h5"
   model = ResnetModel()
   # model.prepare_for_transfer_learning()
   # model.train()

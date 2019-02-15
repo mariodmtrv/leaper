@@ -28,8 +28,8 @@ class MultiprocessDatasetExtractor:
   def __init__(self, selected_dir, split_in_dirs):
     self.split_in_subdirs = split_in_dirs
     self.ROOT_PATH = BASE_PATH + selected_dir
-    self.DATA_FILE = self.ROOT_PATH + "/train.csv"
-    self.OUT_DIR = BASE_PATH + "/images" + selected_dir
+    self.DATA_FILE = self.ROOT_PATH + "/test.csv"
+    self.OUT_DIR = BASE_PATH + "/images" + selected_dir +"_test"
 
   def extract_images(self):
     if not os.path.exists(self.OUT_DIR):
@@ -42,5 +42,5 @@ class MultiprocessDatasetExtractor:
 
 
 if __name__ == '__main__':
-  dataset_extractor = MultiprocessDatasetExtractor("/dev_data", False)
+  dataset_extractor = MultiprocessDatasetExtractor("/ml_vision_data", True)
   dataset_extractor.extract_images()

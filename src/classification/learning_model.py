@@ -23,6 +23,13 @@ class LearningModel(ABC):
     pass
 
   '''
+  Prints the summary of the model
+  '''
+  @abstractmethod
+  def summary(self):
+    pass
+
+  '''
   Saves the trained model to a file
   '''
 
