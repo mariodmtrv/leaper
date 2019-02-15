@@ -1,14 +1,9 @@
+import os
 import pickle
 
 import numpy as np
 from keras.models import load_model
-from keras_applications.resnet50 import preprocess_input
 from keras_preprocessing import image
-import cv2
-import keras.backend as K
-import matplotlib.pyplot as plt
-from keras_preprocessing.image import ImageDataGenerator
-from scipy.misc import imread, imresize
 from sklearn.metrics import classification_report
 
 from reporting.execution_parameters import BASE_PATH, CURRENT_DATASET, \
@@ -19,7 +14,7 @@ class ModelPredictions:
   def __init__(self):
     self.resnet_model, self.resnet_mapping = self.load_model_and_mapping(
         "resnet")
-    # self.inception_model, self.inception_mapping = self.load_model_and_mapping("inception")
+    self.inception_model, self.inception_mapping = self.load_model_and_mapping("inception")
 
   def load_model_and_mapping(self, model_name):
     model = load_model(
@@ -32,9 +27,9 @@ class ModelPredictions:
 
   def __predict(self, model, mapping, image_subpath):
     # predicting images
-    img = image.load_img(
-        BASE_PATH + "/images/" + CURRENT_DATASET + "_data/" + image_subpath,
-        target_size=(TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION))
+    img = image.load_img(image_subpath,
+                         target_size=(
+                         TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION))
     x = image.img_to_array(img)
     x = np.expand_dims(x, axis=0)
 
@@ -48,15 +43,34 @@ class ModelPredictions:
   def resnet_predict(self, image_subpath):
     return self.__predict(self.resnet_model, self.resnet_mapping, image_subpath)
 
-  def generate_classification_report(self, model, mapping):
+  def inception_predict(self, image_subpath):
+    return self.__predict(self.inception_model, self.inception_mapping,
+                          image_subpath)
+
+  def predict(self, image_subpath):
+    predicted_class_resnet, probability_resnet = self.resnet_predict(
+      image_subpath)
+    predicted_class_inception, probability_inception = self.resnet_predict(
+      image_subpath)
+    return predicted_class_resnet if probability_resnet > probability_inception else predicted_class_inception
+
+  def generate_classification_report(self):
     y_true = []
     y_pred = []
-    image_subpath = ""
-    predicted_class,_ =  self.__predict(self, model, mapping, image_subpath)
-    y_pred.append(predicted_class)
+    rootDir = BASE_PATH + "/images/" + CURRENT_DATASET + "_data_test/"
+    for fullDirName, subdirList, fileList in os.walk(rootDir, topdown=False):
+      dir = fullDirName[fullDirName.rfind("/") + 1:]
+      print('Found directory: %s' % dir)
+      for filename in fileList:
+        image_subpath = rootDir + dir + "/" + filename
+        predicted_class, _ = self.__predict(self.resnet_model,
+                                            self.resnet_mapping, image_subpath)
+        y_true.append(dir)
+        y_pred.append(predicted_class)
     print(classification_report(y_true, y_pred))
 
 
 if __name__ == '__main__':
   predictions = ModelPredictions()
-  predictions.resnet_predict('1341/44f5ae1e65bc9e43.jpg')
+  predictions.generate_classification_report()
+  # predictions.resnet_predict('1341/44f5ae1e65bc9e43.jpg')

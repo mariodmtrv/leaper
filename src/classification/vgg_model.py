@@ -59,8 +59,6 @@ class VggModel(LearningModel):
 
 
 if __name__ == '__main__':
-  # print(K.tensorflow_backend._get_available_gpus())
-
   PATH = BASE_PATH + "/images" + "/ml_vision_data/"
   MODEL_PATH = BASE_PATH + "/models" + "/vgg_ml_vision_model.h5"
   model = VggModel()

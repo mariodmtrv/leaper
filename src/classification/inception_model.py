@@ -1,23 +1,18 @@
 import os
+
 import numpy as np
 from keras.applications import inception_v3
-from keras.preprocessing.image import load_img, ImageDataGenerator
-from keras.preprocessing.image import img_to_array
 from keras.applications.imagenet_utils import decode_predictions
 from keras.applications.inception_v3 import preprocess_input
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+from keras.layers import Dense
+from keras.models import Model
+from keras.preprocessing.image import img_to_array
+from keras.preprocessing.image import load_img, ImageDataGenerator
 
 from classification.learning_model import LearningModel
-from image_extraction.dataset_sampler import DATASETS, DatasetType
-from keras.models import Model
-from keras.layers import Dense, Flatten
-from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger, \
-  ReduceLROnPlateau
-import matplotlib.pyplot as plt
-from keras.models import load_model
-
 from reporting.execution_parameters import BASE_PATH, CURRENT_DATASET, \
   DATSET_CATEGORIES_COUNT, TARGET_IMAGE_DIMENSION
-from keras import backend as K
 
 
 class InceptionModel(LearningModel):
@@ -63,61 +58,59 @@ class InceptionModel(LearningModel):
         output)
     self.inception_model = Model(self.inception_model.input, output)
 
-    def summary(self):
-      print(self.inception_model.summary())
+  def summary(self):
+    print(self.inception_model.summary())
 
-    def train(self):
-      train_datagen = ImageDataGenerator(
-          preprocessing_function=preprocess_input, rotation_range=20,
-          zoom_range=[0.7, 0.9],
-          horizontal_flip=True,
-          rescale=1. / 255)
-      train_generator = train_datagen.flow_from_directory(PATH,
-                                                          # this is where you specify the path to the main data folder
-                                                          target_size=(
-                                                            224, 224),
-                                                          color_mode='rgb',
-                                                          batch_size=32,
-                                                          class_mode='categorical',
-                                                          shuffle=True)
-      validation_datagen = ImageDataGenerator(
-          preprocessing_function=preprocess_input, rotation_range=20,
-          zoom_range=[0.7, 0.9],
-          horizontal_flip=True,
-          rescale=1. / 255)
-      validation_generator = validation_datagen.flow_from_directory(
-          PATH + "_test",
-          target_size=(TARGET_IMAGE_DIMENSION,
-                       TARGET_IMAGE_DIMENSION),
-          class_mode="categorical")
-      validation_steps = validation_generator.n // validation_generator.batch_size
-      best_model_path = BASE_PATH + "/models" + "/inception_" + CURRENT_DATASET + "_model.h5"
+  def train(self):
+    train_datagen = ImageDataGenerator(
+        preprocessing_function=preprocess_input, rotation_range=20,
+        zoom_range=[0.7, 0.9],
+        horizontal_flip=True,
+        rescale=1. / 255)
+    train_generator = train_datagen.flow_from_directory(PATH,
+                                                        # this is where you specify the path to the main data folder
+                                                        target_size=(
+                                                          224, 224),
+                                                        color_mode='rgb',
+                                                        batch_size=32,
+                                                        class_mode='categorical',
+                                                        shuffle=True)
+    validation_datagen = ImageDataGenerator(
+        preprocessing_function=preprocess_input, rotation_range=20,
+        zoom_range=[0.7, 0.9],
+        horizontal_flip=True,
+        rescale=1. / 255)
+    validation_generator = validation_datagen.flow_from_directory(
+        PATH + "_test",
+        target_size=(TARGET_IMAGE_DIMENSION,
+                     TARGET_IMAGE_DIMENSION),
+        class_mode="categorical")
+    validation_steps = validation_generator.n // validation_generator.batch_size
+    best_model_path = BASE_PATH + "/models" + "/inception_" + CURRENT_DATASET + "_model.h5"
 
-      callbacks = [
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1),
-        ModelCheckpoint(filepath=best_model_path, monitor='val_loss', save_best_only=True, verbose=1),
-      ]
-      self.inception_model.compile(optimizer='Adam',
-                                   loss='categorical_crossentropy',
-                                   metrics=['accuracy'])
-      step_size_train = train_generator.n // train_generator.batch_size
-      self.inception_model.fit_generator(generator=train_generator,
-                                         steps_per_epoch=step_size_train,
-                                         validation_data=validation_generator,
-                                         validation_steps= validation_steps,
-                                         epochs=5,
-                                         callbacks = callbacks)
+    callbacks = [
+      ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1),
+      ModelCheckpoint(filepath=best_model_path, monitor='val_loss', save_best_only=True, verbose=1),
+    ]
+    self.inception_model.compile(optimizer='Adam',
+                                 loss='categorical_crossentropy',
+                                 metrics=['accuracy'])
+    step_size_train = train_generator.n // train_generator.batch_size
+    self.inception_model.fit_generator(generator=train_generator,
+                                       steps_per_epoch=step_size_train,
+                                       validation_data=validation_generator,
+                                       validation_steps= validation_steps,
+                                       epochs=5,
+                                       callbacks = callbacks)
 
-    def save(self):
-      self.inception_model.save(MODEL_PATH)
+  def save(self):
+    self.inception_model.save(MODEL_PATH)
 
 
 if __name__ == '__main__':
-  # print(K.tensorflow_backend._get_available_gpus())
 
-  PATH = BASE_PATH + "/images" + "/" + CURRENT_DATASET + "_data/"
+  PATH = BASE_PATH + "/images" + "/" + CURRENT_DATASET + "_data"
   MODEL_PATH = BASE_PATH + "/models" + "/inception_" + CURRENT_DATASET + "_model.h5"
   model = InceptionModel()
   model.prepare_for_transfer_learning()
-  # list = model.get_files_list(PATH)
-  # model.generate_train(list)
+  model.train()
