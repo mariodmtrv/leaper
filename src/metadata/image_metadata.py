@@ -5,7 +5,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 class ImageMetadata():
   '''
   Extract the exif data from any image. Data includes GPS coordinates,
-  Focal Length, Manufacture, and more.
+  Focal Length, Manufacturer, and more.
   '''
   exif_data = None
   image = None

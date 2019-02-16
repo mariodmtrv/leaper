@@ -14,7 +14,7 @@ class ModelPredictions:
   def __init__(self):
     self.resnet_model, self.resnet_mapping = self.load_model_and_mapping(
         "resnet")
-    self.inception_model, self.inception_mapping = self.load_model_and_mapping("inception")
+    # self.inception_model, self.inception_mapping = self.load_model_and_mapping("inception")
 
   def load_model_and_mapping(self, model_name):
     model = load_model(

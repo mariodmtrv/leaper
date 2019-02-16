@@ -151,8 +151,8 @@ class ResnetModel(LearningModel):
 
 if __name__ == '__main__':
   PATH = BASE_PATH + "/images" + "/" + CURRENT_DATASET + "_data"
-  MODEL_PATH = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_model_2.h5"
+  MODEL_PATH = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_model.h5"
   model = ResnetModel()
-  model.prepare_for_transfer_learning()
-  model.train()
+  # model.prepare_for_transfer_learning()
+  # model.train()
   model.heatmap_for_image('326/00bc25c5f45a53a6.jpg')
