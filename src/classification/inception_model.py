@@ -5,7 +5,7 @@ from keras.applications import inception_v3
 from keras.applications.imagenet_utils import decode_predictions
 from keras.applications.inception_v3 import preprocess_input
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Dense
+from keras.layers import Dense, GlobalAveragePooling2D
 from keras.models import Model
 from keras.preprocessing.image import img_to_array
 from keras.preprocessing.image import load_img, ImageDataGenerator
@@ -17,29 +17,8 @@ from reporting.execution_parameters import BASE_PATH, CURRENT_DATASET, \
 
 class InceptionModel(LearningModel):
   def __init__(self):
-    self.inception_model = inception_v3.InceptionV3(weights='imagenet')
-
-  def predict(self, files_list):
-    classes = {}
-    counter = 0
-    for filename in files_list:
-      original = load_img(PATH + filename, target_size=(
-      TARGET_IMAGE_DIMENSION, TARGET_IMAGE_DIMENSION))
-      numpy_image = img_to_array(original)
-      image_batch = np.expand_dims(numpy_image, axis=0)
-      # plt.imshow(np.uint8(image_batch[0]))
-      processed_image = inception_v3.preprocess_input(image_batch.copy())
-      predictions = self.inception_model.predict(processed_image)
-      label = decode_predictions(predictions)
-      cls = label[0][0][1]
-      if (cls in classes):
-        classes[cls] = classes[cls] + 1
-      else:
-        classes[cls] = 1
-      counter = counter + 1
-      if counter % 100 == 1:
-        print(counter)
-    return classes
+    self.inception_model = inception_v3.InceptionV3(weights='imagenet',
+                                                    include_top=False)
 
   @staticmethod
   def get_files_list(directory):
@@ -47,15 +26,20 @@ class InceptionModel(LearningModel):
     return files_list
 
   def prepare_for_transfer_learning(self):
-    for layer in self.inception_model.layers[:312]:
+    # for layer in self.inception_model.layers[:312]:
+    #   layer.trainable = False
+    # self.inception_model.layers.pop()
+    # self.inception_model.layers[-1].outbound_nodes = []
+    # self.inception_model.outputs = [self.inception_model.layers[-1].output]
+    # output = self.inception_model.get_layer('avg_pool').output
+    # output = Dense(activation='relu', units=DATSET_CATEGORIES_COUNT)(output)
+    # output = Dense(activation='softmax', units=DATSET_CATEGORIES_COUNT)(
+    #     output)
+    for layer in self.inception_model.layers[:]:
       layer.trainable = False
-    self.inception_model.layers.pop()
-    self.inception_model.layers[-1].outbound_nodes = []
-    self.inception_model.outputs = [self.inception_model.layers[-1].output]
-    output = self.inception_model.get_layer('avg_pool').output
-    output = Dense(activation='relu', units=DATSET_CATEGORIES_COUNT)(output)
-    output = Dense(activation='sigmoid', units=DATSET_CATEGORIES_COUNT)(
-        output)
+    x = self.inception_model.output
+    x = GlobalAveragePooling2D()(x)
+    output = Dense(DATSET_CATEGORIES_COUNT, activation='softmax')(x)
     self.inception_model = Model(self.inception_model.input, output)
 
   def summary(self):
@@ -89,8 +73,10 @@ class InceptionModel(LearningModel):
     best_model_path = BASE_PATH + "/models" + "/inception_" + CURRENT_DATASET + "_model.h5"
 
     callbacks = [
-      ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1),
-      ModelCheckpoint(filepath=best_model_path, monitor='val_loss', save_best_only=True, verbose=1),
+      ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5,
+                        min_lr=0.00001, verbose=1),
+      ModelCheckpoint(filepath=best_model_path, monitor='val_loss',
+                      save_best_only=True, verbose=1),
     ]
     self.inception_model.compile(optimizer='Adam',
                                  loss='categorical_crossentropy',
@@ -99,18 +85,18 @@ class InceptionModel(LearningModel):
     self.inception_model.fit_generator(generator=train_generator,
                                        steps_per_epoch=step_size_train,
                                        validation_data=validation_generator,
-                                       validation_steps= validation_steps,
+                                       validation_steps=validation_steps,
                                        epochs=5,
-                                       callbacks = callbacks)
+                                       callbacks=callbacks)
 
   def save(self):
     self.inception_model.save(MODEL_PATH)
 
 
 if __name__ == '__main__':
-
   PATH = BASE_PATH + "/images" + "/" + CURRENT_DATASET + "_data"
   MODEL_PATH = BASE_PATH + "/models" + "/inception_" + CURRENT_DATASET + "_model.h5"
   model = InceptionModel()
   model.prepare_for_transfer_learning()
+  model.summary()
   model.train()

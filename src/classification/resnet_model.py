@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras.applications import resnet50
 from keras.applications.resnet50 import preprocess_input
-from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
-from keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, TensorBoard
+from keras.layers import Dense, GlobalAveragePooling2D
 from keras.models import Model
 from keras.models import load_model
 from keras.preprocessing.image import ImageDataGenerator
@@ -29,23 +29,12 @@ class ResnetModel(LearningModel):
     return files_list
 
   def prepare_for_transfer_learning(self):
-    last_layer = self.resnet_model.output
-    # add a global spatial average pooling layer
-    x = GlobalAveragePooling2D()(last_layer)
-    # add fully-connected & dropout layers
-    x = Dense(512, activation='relu', name='fc-1')(x)
-    x = Dropout(0.5)(x)
-    x = Dense(256, activation='relu', name='fc-2')(x)
-    x = Dropout(0.5)(x)
-    # a softmax layer for 4 classes
-    output = Dense(DATSET_CATEGORIES_COUNT, activation='softmax',
-                   name='output_layer')(x)
-    self.resnet_model = Model(self.resnet_model.input, output)
-    self.resnet_model.summary()
-
-    for layer in self.resnet_model.layers[:-6]:
+    for layer in self.resnet_model.layers[:]:
       layer.trainable = False
-    self.resnet_model.layers[-1].trainable
+    x = self.resnet_model.output
+    x = GlobalAveragePooling2D()(x)
+    output = Dense(DATSET_CATEGORIES_COUNT, activation='softmax')(x)
+    self.resnet_model = Model(self.resnet_model.input, output)
 
   def summary(self):
     print(self.resnet_model.summary())
@@ -85,19 +74,23 @@ class ResnetModel(LearningModel):
     best_model_path = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_model.h5"
 
     callbacks = [
-      ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1),
-      ModelCheckpoint(filepath=best_model_path, monitor='val_loss', save_best_only=True, verbose=1),
+      ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5,
+                        min_lr=0.00001, verbose=1),
+      ModelCheckpoint(filepath=best_model_path, monitor='val_loss',
+                      save_best_only=True, verbose=1),
+      TensorBoard(log_dir='../../resources/logs', histogram_freq=0,
+                  write_graph=True, write_images=True)
     ]
     self.resnet_model.fit_generator(generator=train_generator,
                                     steps_per_epoch=step_size_train,
                                     validation_data=validation_generator,
-                                    validation_steps= validation_steps,
+                                    validation_steps=validation_steps,
                                     epochs=5,
-                                    callbacks = callbacks)
+                                    callbacks=callbacks)
     self.is_trained = True
 
   def store_class_mapping(self, train_generator):
-    filepath = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_2.mapping"
+    filepath = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + ".mapping"
     with open(filepath, 'wb') as file:
       label_map = (train_generator.class_indices)
       pickle.dump(label_map, file, pickle.HIGHEST_PROTOCOL)
@@ -153,6 +146,7 @@ if __name__ == '__main__':
   PATH = BASE_PATH + "/images" + "/" + CURRENT_DATASET + "_data"
   MODEL_PATH = BASE_PATH + "/models" + "/resnet_" + CURRENT_DATASET + "_model.h5"
   model = ResnetModel()
-  # model.prepare_for_transfer_learning()
-  # model.train()
-  model.heatmap_for_image('326/00bc25c5f45a53a6.jpg')
+  model.prepare_for_transfer_learning()
+  model.summary()
+  model.train()
+  # model.heatmap_for_image('326/00bc25c5f45a53a6.jpg')
