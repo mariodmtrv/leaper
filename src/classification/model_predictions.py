@@ -2,6 +2,8 @@ import os
 import pickle
 
 import numpy as np
+from keras import Model
+from keras.layers import Average
 from keras.models import load_model
 from keras_preprocessing import image
 from sklearn.metrics import classification_report
@@ -14,7 +16,8 @@ class ModelPredictions:
   def __init__(self):
     self.resnet_model, self.resnet_mapping = self.load_model_and_mapping(
         "resnet")
-    # self.inception_model, self.inception_mapping = self.load_model_and_mapping("inception")
+    self.inception_model, self.inception_mapping = self.load_model_and_mapping("inception")
+    self.embeddings_model, self.embeddings_mapping = self.load_model_and_mapping("embeddings")
 
   def load_model_and_mapping(self, model_name):
     model = load_model(
@@ -53,6 +56,20 @@ class ModelPredictions:
     predicted_class_inception, probability_inception = self.resnet_predict(
       image_subpath)
     return predicted_class_resnet if probability_resnet > probability_inception else predicted_class_inception
+
+
+  """
+  An average model of all the created ones
+  """
+
+
+  def average_model(self):
+    inception_output = self.inception_model.output[0]
+    resnet_output = self.resnet_model.output[0]
+    embeddings_output = self.embeddings_model.output[0]
+    y = Average()([inception_output, resnet_output, embeddings_output])
+    average_model = Model(self.resnet_model.input, y, name='ensemble')
+
 
   def generate_classification_report(self):
     y_true = []
