@@ -66,8 +66,7 @@ class ModelPredictions:
   def average_model(self):
     inception_output = self.inception_model.output[0]
     resnet_output = self.resnet_model.output[0]
-    embeddings_output = self.embeddings_model.output[0]
-    y = Average()([inception_output, resnet_output, embeddings_output])
+    y = Average()([inception_output, resnet_output])
     average_model = Model(self.resnet_model.input, y, name='ensemble')
 
 

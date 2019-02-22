@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras.applications import resnet50
 from keras.applications.resnet50 import preprocess_input
-from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, TensorBoard
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
 from keras.layers import Dense, GlobalAveragePooling2D
 from keras.models import Model
 from keras.models import load_model
@@ -78,8 +78,6 @@ class ResnetModel(LearningModel):
                         min_lr=0.00001, verbose=1),
       ModelCheckpoint(filepath=best_model_path, monitor='val_loss',
                       save_best_only=True, verbose=1),
-      TensorBoard(log_dir='../../resources/logs', histogram_freq=0,
-                  write_graph=True, write_images=True)
     ]
     self.resnet_model.fit_generator(generator=train_generator,
                                     steps_per_epoch=step_size_train,

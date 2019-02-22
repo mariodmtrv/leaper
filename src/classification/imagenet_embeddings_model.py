@@ -35,7 +35,7 @@ class ImagenetEmbeddingsModel:
     predictions = self.resnet_model.predict(processed_image)
     labels = decode_predictions(predictions, top=MAX_SEQUENCE_LENGTH)[0]
     extracted_text_labels = list(map(lambda x: x[1], labels))
-    return ' '.join(word for word in extracted_text_labels)
+    return ' '.join(word for word in extracted_text_labels).replace('_', ' ')
 
   def generate_docs_and_labels(self):
     documents = []
