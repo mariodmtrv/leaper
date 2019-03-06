@@ -42,5 +42,5 @@ class MultiprocessDatasetExtractor:
 
 
 if __name__ == '__main__':
-  dataset_extractor = MultiprocessDatasetExtractor("/ml_vision_data", True)
+  dataset_extractor = MultiprocessDatasetExtractor("/hypo_eval_data", True)
   dataset_extractor.extract_images()

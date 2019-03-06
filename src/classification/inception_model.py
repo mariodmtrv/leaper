@@ -1,14 +1,11 @@
 import os
 
-import numpy as np
 from keras.applications import inception_v3
-from keras.applications.imagenet_utils import decode_predictions
 from keras.applications.inception_v3 import preprocess_input
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Dense, GlobalAveragePooling2D
+from keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from keras.models import Model
-from keras.preprocessing.image import img_to_array
-from keras.preprocessing.image import load_img, ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 
 from classification.learning_model import LearningModel
 from reporting.execution_parameters import BASE_PATH, CURRENT_DATASET, \
@@ -26,19 +23,11 @@ class InceptionModel(LearningModel):
     return files_list
 
   def prepare_for_transfer_learning(self):
-    # for layer in self.inception_model.layers[:312]:
-    #   layer.trainable = False
-    # self.inception_model.layers.pop()
-    # self.inception_model.layers[-1].outbound_nodes = []
-    # self.inception_model.outputs = [self.inception_model.layers[-1].output]
-    # output = self.inception_model.get_layer('avg_pool').output
-    # output = Dense(activation='relu', units=DATSET_CATEGORIES_COUNT)(output)
-    # output = Dense(activation='softmax', units=DATSET_CATEGORIES_COUNT)(
-    #     output)
     for layer in self.inception_model.layers[:]:
       layer.trainable = False
     x = self.inception_model.output
     x = GlobalAveragePooling2D()(x)
+    x = Dropout(0.6)(x)
     output = Dense(DATSET_CATEGORIES_COUNT, activation='softmax')(x)
     self.inception_model = Model(self.inception_model.input, output)
 
@@ -46,11 +35,11 @@ class InceptionModel(LearningModel):
     print(self.inception_model.summary())
 
   def train(self):
-    train_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_input, rotation_range=20,
-        zoom_range=[0.7, 0.9],
-        horizontal_flip=True,
-        rescale=1. / 255)
+    train_datagen = ImageDataGenerator(preprocess_input, rotation_range=10,
+                                       zoom_range=0.1,
+                                       horizontal_flip=True,
+                                       rescale=1. / 255,
+                                       fill_mode='nearest')
     train_generator = train_datagen.flow_from_directory(PATH,
                                                         # this is where you specify the path to the main data folder
                                                         target_size=(
@@ -60,10 +49,7 @@ class InceptionModel(LearningModel):
                                                         class_mode='categorical',
                                                         shuffle=True)
     validation_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_input, rotation_range=20,
-        zoom_range=[0.7, 0.9],
-        horizontal_flip=True,
-        rescale=1. / 255)
+        preprocessing_function=preprocess_input)
     validation_generator = validation_datagen.flow_from_directory(
         PATH + "_test",
         target_size=(TARGET_IMAGE_DIMENSION,

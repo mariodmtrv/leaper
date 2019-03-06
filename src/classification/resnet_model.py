@@ -8,7 +8,7 @@ import numpy as np
 from keras.applications import resnet50
 from keras.applications.resnet50 import preprocess_input
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
-from keras.layers import Dense, GlobalAveragePooling2D
+from keras.layers import Dense, GlobalAveragePooling2D, Dropout
 from keras.models import Model
 from keras.models import load_model
 from keras.preprocessing.image import ImageDataGenerator
@@ -33,6 +33,7 @@ class ResnetModel(LearningModel):
       layer.trainable = False
     x = self.resnet_model.output
     x = GlobalAveragePooling2D()(x)
+    x = Dropout(0.5)(x)
     output = Dense(DATSET_CATEGORIES_COUNT, activation='softmax')(x)
     self.resnet_model = Model(self.resnet_model.input, output)
 
@@ -41,16 +42,13 @@ class ResnetModel(LearningModel):
 
   def train(self):
     # print(self.resnet_model.summary())
-    train_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_input, rotation_range=20,
-        zoom_range=[0.7, 0.9],
-        horizontal_flip=True,
-        rescale=1. / 255)
+    train_datagen = ImageDataGenerator(preprocess_input, rotation_range=10,
+                                       zoom_range=0.1,
+                                       horizontal_flip=True,
+                                       rescale=1. / 255,
+                                       fill_mode='nearest')
     validation_datagen = ImageDataGenerator(
-        preprocessing_function=preprocess_input, rotation_range=20,
-        zoom_range=[0.7, 0.9],
-        horizontal_flip=True,
-        rescale=1. / 255)
+        preprocessing_function=preprocess_input)
     train_generator = train_datagen.flow_from_directory(PATH,
                                                         target_size=(
                                                           TARGET_IMAGE_DIMENSION,

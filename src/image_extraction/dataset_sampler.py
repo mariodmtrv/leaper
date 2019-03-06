@@ -86,5 +86,5 @@ class DatasetSampler:
 
 
 if __name__ == '__main__':
-  sampler = DatasetSampler(DATASETS[DatasetType.ML_VISION])
+  sampler = DatasetSampler(DATASETS[DatasetType.HYPO_EVAL])
   sampler.select_categories()
